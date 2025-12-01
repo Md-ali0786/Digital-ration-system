@@ -1,5 +1,5 @@
 # ============================================================
-# SMART RATION SYSTEM - FINAL FABULOUS CODE (V8 - YELLOW WATCH & ENHANCED HERO)
+# SMART RATION SYSTEM - FINAL FABULOUS CODE (V8 - READY-TO-USE BENEFICIARY)
 # ============================================================
 
 from flask import (
@@ -19,8 +19,8 @@ import re
 # ============================================================
 
 app = Flask(__name__, static_folder='static')
-# IMPORTANT: Replace with a strong, random key in production
-app.secret_key = "a-truly-secure-fabolues-ration-system-key-for-project-v8"
+# CRITICAL FIX: Load secret key from environment variable for security
+app.secret_key = os.environ.get("RATION_SECRET_KEY", "a-truly-secure-fabolues-ration-system-key-for-project-v8")
 bcrypt = Bcrypt(app)
 
 # Directories
@@ -180,11 +180,20 @@ def init_db():
             INSERT INTO users (card_number, name, password_hash, is_admin, is_pre_registered, is_approved, policy_accepted, member_count)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, ('admin', 'Main Admin', admin_pass, 1, 0, 1, 1, 1))
+        
         view_pass = bcrypt.generate_password_hash("viewpass").decode('utf-8')
         cur.execute("""
             INSERT INTO users (card_number, name, password_hash, is_secondary_admin, is_pre_registered, is_approved, policy_accepted, member_count)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, ('view', 'Secondary Admin', view_pass, 0, 0, 1, 1, 1))
+        
+        # --- START OF FIX: ADD WORKING BENEFICIARY ---
+        user_pass = bcrypt.generate_password_hash("userpass").decode('utf-8')
+        cur.execute("""
+            INSERT INTO users (card_number, name, password_hash, is_pre_registered, is_approved, policy_accepted, member_count, card_type)
+            VALUES (?, ?, ?, 1, 1, 1, 4, 'BPL')
+        """, ('USER001', 'Test Beneficiary', user_pass, ))
+        # --- END OF FIX ---
 
     # Seed items
     cur.execute("SELECT id FROM items")
@@ -410,9 +419,11 @@ def get_home_hero_content(db):
     is_frozen = str(get_config('system_freeze', '0')) == '1'
     
     # Static visual switch based on system freeze
-    switch_class = "bg-red-500 justify-start" if is_frozen else "bg-green-500 justify-end"
+    # --- ADJUSTED COLORS FOR ATTRACTIVENESS ---
+    switch_class = "bg-red-700 justify-start" if is_frozen else "bg-amber-500 justify-end"
     switch_status = "FREEZE" if is_frozen else "ACTIVE"
-    switch_label_class = "text-red-900" if is_frozen else "text-green-900"
+    switch_label_class = "text-red-900" if is_frozen else "text-amber-900"
+    # --- END ADJUSTED COLORS ---
     
     switch_html = f"""
     <div class="flex items-center">
@@ -436,25 +447,25 @@ def get_home_hero_content(db):
             </div>
             
             <div class="h-16 flex items-center justify-center text-center">
-                <div class="text-xl font-extrabold text-white bg-blue-900/50 p-2 rounded-lg shadow-inner border-y border-yellow-400/50">
+                <div class="text-xl font-extrabold text-white bg-blue-900/70 p-2 rounded-xl shadow-2xl border-y-4 border-amber-400/80">
                     Welcome to the Smart Ration Distribution Service
                 </div>
             </div>
             <div class="mt-4 pt-3 border-t border-gray-500">
                 <div class="grid grid-cols-2 gap-4">
                     
-                    <div class="p-3 rounded-xl bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-md">
+                    <div class="p-4 rounded-xl bg-blue-700/60 backdrop-blur-md text-white border border-amber-300/50 shadow-lg">
                         <p class="text-xs font-semibold opacity-80">Total Beneficiaries:</p>
-                        <p class="text-2xl font-extrabold">{total_users}</p>
+                        <p class="text-3xl font-extrabold text-amber-300">{total_users}</p>
                     </div>
 
-                    <div class="p-3 rounded-xl bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-md">
+                    <div class="p-4 rounded-xl bg-blue-700/60 backdrop-blur-md text-white border border-amber-300/50 shadow-lg">
                         <p class="text-xs font-semibold opacity-80">Orders Pending:</p>
-                        <p class="text-2xl font-extrabold text-red-300">{pending_tokens}</p>
+                        <p class="text-3xl font-extrabold text-red-400">{pending_tokens}</p>
                     </div>
                 </div>
                 
-                <div class="mt-4 flex justify-center bg-white/30 p-2 rounded-xl border border-white/50 shadow-inner">
+                <div class="mt-4 flex justify-center bg-blue-900/30 p-2 rounded-xl border border-amber-400/50 shadow-inner">
                     {switch_html}
                 </div>
             </div>
@@ -475,10 +486,6 @@ def get_layout(title, content, role='guest'):
         <a href="{url_for('ration_rules_page')}" class="px-3 py-2 rounded-md text-sm font-medium hover:underline">Ration Rules</a>
         <a href="{url_for('logout')}" class="px-3 py-2 rounded-md text-sm font-medium hover:underline">Logout</a>
     """
-    public_links = f"""
-        <a href="{url_for('home')}" class="px-3 py-2 rounded-md text-sm font-medium hover:underline">Home</a>
-        <a href="{url_for('ration_rules_page')}" class="px-3 py-2 rounded-md text-sm font-medium hover:underline">Ration Rules</a>
-    """
     
     admin_nav_links = ""
     if role == 'admin' or role == 'secondary_admin':
@@ -496,15 +503,17 @@ def get_layout(title, content, role='guest'):
         nav_middle = admin_nav_links
         nav_right = f'<a href="{url_for('logout')}" class="hidden sm:inline-block bg-white text-red-700 px-4 py-2 rounded-xl font-semibold hover:shadow-lg hover:bg-gray-100">Logout</a>'
     else:
+        # Navigation links for guest user (Home link removed from the list)
         nav_middle = f"""
-            {public_links}
+            <a href="{url_for('how_it_works')}" class="px-3 py-2 rounded-md text-sm font-medium hover:underline">How It Works</a>
+            <a href="{url_for('ration_rules_page')}" class="px-3 py-2 rounded-md text-sm font-medium hover:underline">Ration Rules</a>
             <a href="{url_for('register')}" class="px-3 py-2 rounded-md text-sm font-medium hover:underline">Register</a>
         """
         nav_right = f"""
             <a href="{url_for('login')}" class="hidden sm:inline-block bg-white text-blue-700 px-4 py-2 rounded-xl font-bold hover:shadow-lg">User Login</a>
             <a href="{url_for('admin_login')}" class="hidden sm:inline-block bg-yellow-400 text-gray-900 px-4 py-2 rounded-xl font-bold hover:shadow-lg">Admin</a>
         """
-
+    
     logo_html = get_logo_html()
     flashes_html = render_flashes()
     main_class = "max-w-6xl mx-auto p-6" if role not in ['guest'] else "mx-auto"
@@ -795,7 +804,7 @@ def ration_rules_page():
         form_html = """
         <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-xl mt-6 shadow-md">
             <p class="font-bold text-lg flex items-center gap-2"><span class="emoji-fix">✅</span> Status: Accepted</p>
-            <p>Thank you. Your compliance allows you to access all beneficiary services. You are free to <a href="/book_items" class="font-bold underline text-green-800">Start Booking Items</a>.</p>
+            <p>Thank you. Your compliance allows you to access all beneficiary services. You are free to <a href="/book_items" class="font-bold underline text-green-800">Start Booking Items</a></p>
         </div>
         """
         
@@ -913,9 +922,12 @@ def login():
     <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md mx-auto border-t-8 border-blue-600">
         <h2 class="text-3xl font-bold mb-6 text-blue-900 text-center">Beneficiary Login <span class="emoji-fix">🔑</span></h2>
         {err_html}
+        <div class="bg-gray-100 p-3 mb-4 rounded-lg text-sm text-center font-semibold border-2 border-dashed border-red-300">
+            TEST USER: Card **USER001**, Pass **userpass**
+        </div>
         <form method="POST" class="space-y-4">
-            <input name="card_number" placeholder="Card Number" required class="border p-3 rounded-lg w-full text-lg uppercase" value="{request.form.get('card_number', '')}">
-            <input type="password" name="password" placeholder="Password" required class="border p-3 rounded-lg w-full text-lg">
+            <input name="card_number" placeholder="Card Number (e.g., USER001)" required class="border p-3 rounded-lg w-full text-lg uppercase" value="{request.form.get('card_number', '')}">
+            <input type="password" name="password" placeholder="Password (e.g., userpass)" required class="border p-3 rounded-lg w-full text-lg">
             <button class="bg-blue-600 text-white px-4 py-4 rounded-xl w-full font-extrabold text-xl hover:bg-blue-700 shadow-lg transform hover:scale-[1.01] transition duration-300">Secure Login</button>
         </form>
         <p class="text-sm text-gray-600 mt-6 text-center">New Card? <a href="{url_for('register')}" class="text-green-600 font-semibold hover:underline">Register Here</a></p>
@@ -1111,7 +1123,7 @@ def profile():
             <input name="card_type" value="{user['card_type'] or ''}" class="border p-3 rounded-lg text-lg uppercase" placeholder="Card Type (e.g., APL, BPL)">
             <input name="mobile_number" value="{user['mobile_number'] or ''}" class="border p-3 rounded-lg text-lg" placeholder="Mobile">
             <input name="member_count" type="number" min="1" max="{max_household_size}" value="{user['member_count']}" class="border p-3 rounded-lg text-lg" placeholder="Household Member Count">
-            <textarea name="address" class="border p-3 rounded-lg text-lg h-24" placeholder="Address">{user['address'] or ''}</textarea>
+            <textarea name="address" class="w-full px-3 py-2 border rounded-lg text-lg h-24" placeholder="Address">{user['address'] or ''}</textarea>
             <label class="text-sm text-gray-600 mt-2 font-semibold">Update Photo (JPG/PNG - Recommended)</label>
             <input type="file" name="photo" accept=".jpg,.jpeg,.png" class="border p-3 rounded-lg bg-gray-50">
             <button class="bg-blue-600 text-white px-4 py-4 rounded-xl font-extrabold text-xl hover:bg-blue-700 mt-4 shadow-lg transform hover:scale-[1.01]">Update Profile Details</button>
@@ -1593,6 +1605,11 @@ def admin_login():
     <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-md mx-auto text-white border-t-8 border-yellow-400">
         <h2 class="text-3xl font-extrabold mb-6 text-yellow-400 text-center">Admin Portal Login <span class="emoji-fix">👑</span></h2>
         {err_html}
+        <div class="bg-gray-700 p-3 mb-4 rounded-lg text-sm text-center font-semibold border-2 border-dashed border-yellow-300">
+            TEST ADMIN: Card **admin**, Pass **adminpass**
+            <br>
+            TEST VIEWER: Card **view**, Pass **viewpass**
+        </div>
         <form method="POST" class="space-y-4">
             <input name="card_number" placeholder="Admin ID (e.g., admin or view)" required class="border p-3 rounded-lg w-full bg-gray-700 text-white placeholder-gray-400 text-lg">
             <input type="password" name="password" placeholder="Password" required class="border p-3 rounded-lg w-full bg-gray-700 text-white placeholder-gray-400 text-lg">
@@ -1731,7 +1748,7 @@ def admin_preregister():
             else:
                 flash("Invalid photo file type. Only JPG, JPEG, PNG allowed.", "error")
                 return redirect(url_for("admin_preregister"))
-        
+            
         try:
             db.execute("""
                 INSERT INTO users (card_number, name, mobile_number, member_count, password_hash, photo_filename,
@@ -2007,7 +2024,7 @@ def admin_manage_users():
         action = request.form.get('action')
         card_number = request.form.get('card_number', '').strip().upper()
         
-        if card_number in ('admin', 'view') and card_number != g.user['card_number']:
+        if card_number in ('ADMIN', 'VIEW') and card_number.lower() != g.user['card_number'].lower():
              if not is_main_admin:
                  flash("Permission denied. You cannot modify main admin accounts.", "error")
                  return redirect(url_for("admin_manage_users"))
