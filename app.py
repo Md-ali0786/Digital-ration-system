@@ -9,7 +9,7 @@ from functools import wraps
 import uuid
 import os
 import re
-import json # New import for passing structured data to JS
+import json
 
 # ============================================================
 # APP INITIALIZATION
@@ -982,7 +982,7 @@ def register():
                 { pattern: /.{6,8}/, message: "Length 6-8 characters" },
                 { pattern: /[A-Z]/, message: "One Uppercase letter" },
                 { pattern: /[a-z]/, message: "One Lowercase letter" },
-                { pattern: /\d/, message: "One Number" },
+                { pattern: /\\d/, message: "One Number" },
                 { pattern: /[!@#$%^&*()_+]/, message: "One Special Symbol (!@#$%^&*()_+)" }
             ];
             const feedbackElement = document.getElementById('password-feedback');
@@ -1068,9 +1068,6 @@ def login():
     <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md mx-auto border-t-8 border-blue-600">
         <h2 class="text-3xl font-bold mb-6 text-blue-900 text-center">Beneficiary Login <span class="emoji-fix">🔑</span></h2>
         {err_html}
-        <div class="bg-gray-100 p-3 mb-4 rounded-lg text-sm text-center font-semibold border-2 border-dashed border-red-300">
-            TEST USER (Card: **123456789012**, Pass: **User@123**)
-        </div>
         <form method="POST" class="space-y-4">
             <input name="card_number" placeholder="Card Number (12 digits)" required class="border p-3 rounded-lg w-full text-lg" pattern="\\d{{12}}" title="Card number must be exactly 12 digits" maxlength="12" value="{request.form.get('card_number', '')}">
             <div class="relative">
@@ -1597,7 +1594,7 @@ def book_items():
                 db.commit()
                 
                 if warning:
-                     flash(warning, "warning")
+                    flash(warning, "warning")
                     
                 flash(f"Items reserved. Total calculated cost: ₹{total_cost:.2f}. Now choose your slot to finalize.", "info")
                 return redirect(url_for("book_slot"))
@@ -1950,9 +1947,6 @@ def admin_login():
     <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-md mx-auto text-white border-t-8 border-yellow-400">
         <h2 class="text-3xl font-extrabold mb-6 text-yellow-400 text-center">Admin Portal Login <span class="emoji-fix">👑</span></h2>
         {err_html}
-        <div class="bg-gray-700 p-3 mb-4 rounded-lg text-sm text-center font-semibold border-2 border-dashed border-red-300">
-            TEST ADMIN (ID: **admin**, Pass: **Admin@1**) | VIEW ADMIN (ID: **view**, Pass: **View@123**)
-        </div>
         <form method="POST" class="space-y-4">
             <input name="card_number" placeholder="Admin ID (e.g., admin or view)" required class="border p-3 rounded-lg w-full bg-gray-700 text-white placeholder-gray-400 text-lg" value="{request.form.get('card_number', '')}">
             <div class="relative">
@@ -2070,13 +2064,13 @@ def admin_preregister():
             
         # 1. Card Number Validation (12 digits)
         if not re.match(r"^\d{12}$", card_number):
-             flash("Invalid Card Number. Must be exactly **12 digits** (Numbers only).", "error")
-             return redirect(url_for("admin_preregister"))
+            flash("Invalid Card Number. Must be exactly **12 digits** (Numbers only).", "error")
+            return redirect(url_for("admin_preregister"))
             
         # 2. Mobile Validation
         if mobile and not re.match(r"^\d{10}$", mobile):
-             flash("Invalid mobile number. Must be 10 digits.", "error")
-             return redirect(url_for("admin_preregister"))
+            flash("Invalid mobile number. Must be 10 digits.", "error")
+            return redirect(url_for("admin_preregister"))
 
         # 3. Member Count Validation
         try:
@@ -2090,12 +2084,12 @@ def admin_preregister():
             
         # 4. Password Validation (New complex rules, max 8 chars)
         if not password:
-             password = "Temporary@1" # Safe temporary password
-             flash(f"No password provided, a temporary password ('{password}') has been assigned. Advise the user to change it.", "warning")
+            password = "Temporary@1" # Safe temporary password
+            flash(f"No password provided, a temporary password ('{password}') has been assigned. Advise the user to change it.", "warning")
 
         if not PASSWORD_PATTERN.match(password):
-             flash("Invalid Password. Must be 6-8 characters, including at least one uppercase, one lowercase, one number, and one special symbol (!@#$%^&*()_+).", "error")
-             return redirect(url_for("admin_preregister"))
+            flash("Invalid Password. Must be 6-8 characters, including at least one uppercase, one lowercase, one number, and one special symbol (!@#$%^&*()_+).", "error")
+            return redirect(url_for("admin_preregister"))
 
         
         existing_user = db.execute("SELECT card_number FROM users WHERE card_number = ?", (card_number,)).fetchone()
@@ -2150,7 +2144,7 @@ def admin_preregister():
                 { pattern: /.{6,8}/, message: "Length 6-8 characters" },
                 { pattern: /[A-Z]/, message: "One Uppercase letter" },
                 { pattern: /[a-z]/, message: "One Lowercase letter" },
-                { pattern: /\d/, message: "One Number" },
+                { pattern: /\\d/, message: "One Number" },
                 { pattern: /[!@#$%^&*()_+]/, message: "One Special Symbol (!@#$%^&*()_+)" }
             ];
             const feedbackElement = document.getElementById('admin-password-feedback');
@@ -2323,10 +2317,10 @@ def admin_token_validation():
                     # --- FEATURE: Check Blocked Status Immediately ---
                     is_blocked = order_items[0]['is_blocked'] == 1
                     if is_blocked:
-                         error = f"Token {token} found, but the card holder ({order_items[0]['card_number']}) is **BLOCKED** from receiving rations. Fulfillment is prevented."
-                         flash(error, "error")
-                         order_data = None
-                         return redirect(url_for("admin_token_validation"))
+                        error = f"Token {token} found, but the card holder ({order_items[0]['card_number']}) is **BLOCKED** from receiving rations. Fulfillment is prevented."
+                        flash(error, "error")
+                        order_data = None
+                        return redirect(url_for("admin_token_validation"))
                     # --- END FEATURE ---
                     
                     total_cost = sum(item['total_cost'] for item in order_items)
@@ -2522,9 +2516,9 @@ def admin_manage_users():
         card_number = request.form.get('card_number', '').strip()
         
         if card_number in ('admin', 'view') and card_number != g.user['card_number']:
-             if not is_main_admin:
-                 flash("Permission denied. You cannot modify main admin accounts.", "error")
-                 return redirect(url_for("admin_manage_users"))
+            if not is_main_admin:
+                flash("Permission denied. You cannot modify main admin accounts.", "error")
+                return redirect(url_for("admin_manage_users"))
 
         try:
             if action == 'approve':
@@ -2853,7 +2847,7 @@ def admin_change_password():
                 { pattern: /.{6,8}/, message: "Length 6-8 characters" },
                 { pattern: /[A-Z]/, message: "One Uppercase letter" },
                 { pattern: /[a-z]/, message: "One Lowercase letter" },
-                { pattern: /\d/, message: "One Number" },
+                { pattern: /\\d/, message: "One Number" },
                 { pattern: /[!@#$%^&*()_+]/, message: "One Special Symbol (!@#$%^&*()_+)" }
             ];
             const feedbackElement = document.getElementById('change-password-feedback');
